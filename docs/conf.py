@@ -6,7 +6,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = u"pyrank"
+project = u"pyranklib"
 copyright = u"2023, Amaury Lekens"
 author = u"Amaury Lekens"
 

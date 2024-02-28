@@ -3,7 +3,7 @@
 
 import pytest
 
-from src.pyrank.pyrank import part
+from src.pyranklib.pyranklib import part
 
 
 # test part

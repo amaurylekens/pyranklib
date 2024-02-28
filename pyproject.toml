@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "pyrank"
+name = "pyranklib"
 version = "0.1.0"
 description = "Rank and unrank combinatorics"
 authors = ["Amaury Lekens"]

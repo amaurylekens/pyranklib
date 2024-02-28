@@ -1,11 +1,11 @@
-# pyrank
+# pyranklib
 
 Rank and unrank combinatorics
 
 ## Installation
 
 ```bash
-$ pip install pyrank
+$ pip install pyranklib
 ```
 
 ## Usage
@@ -18,8 +18,8 @@ Interested in contributing? Check out the contributing guidelines. Please note t
 
 ## License
 
-`pyrank` was created by Amaury Lekens. It is licensed under the terms of the MIT license.
+`pyranklib` was created by Amaury Lekens. It is licensed under the terms of the MIT license.
 
 ## Credits
 
-`pyrank` was created with [`cookiecutter`](https://cookiecutter.readthedocs.io/en/latest/) and the `py-pkgs-cookiecutter` [template](https://github.com/py-pkgs/py-pkgs-cookiecutter).
+`pyranklib` was created with [`cookiecutter`](https://cookiecutter.readthedocs.io/en/latest/) and the `py-pkgs-cookiecutter` [template](https://github.com/py-pkgs/py-pkgs-cookiecutter).

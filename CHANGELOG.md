@@ -4,4 +4,4 @@
 
 ## v0.1.0 (29/12/2023)
 
-- First release of `pyrank`!
+- First release of `pyranklib`!

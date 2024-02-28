@@ -40,10 +40,10 @@ If you are proposing a feature:
 
 ## Get Started!
 
-Ready to contribute? Here's how to set up `pyrank` for local development.
+Ready to contribute? Here's how to set up `pyranklib` for local development.
 
-1. Download a copy of `pyrank` locally.
-2. Install `pyrank` using `poetry`:
+1. Download a copy of `pyranklib` locally.
+2. Install `pyranklib` using `poetry`:
 
     ```console
     $ poetry install
@@ -69,5 +69,5 @@ Before you submit a pull request, check that it meets these guidelines:
 
 ## Code of Conduct
 
-Please note that the `pyrank` project is released with a
+Please note that the `pyranklib` project is released with a
 Code of Conduct. By contributing to this project you agree to abide by its terms.

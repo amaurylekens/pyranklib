@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=.
 set BUILDDIR=_build
-set SPHINXPROJ=pyrank
+set SPHINXPROJ=pyranklib
 
 if "%1" == "" goto help
 
