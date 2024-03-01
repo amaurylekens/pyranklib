@@ -55,31 +55,73 @@ def unrank_combination(
 
     combination = set()
 
-    if rank > comb(len(universal_set), k):
+    if rank >= comb(len(universal_set), k):
         return None
 
     sliced_universal_set = copy(sorted(list(universal_set)))
     for i in range(k):
 
+        index_rank = 0
         for index in range(len(sliced_universal_set)):
 
-            index_rank = index * comb(
-                len(universal_set) - 1,
+            combs = comb(
+                len(sliced_universal_set[index+1:]),
                 k - (i + 1)
             )
 
+            index_rank += combs
+
             if index_rank > rank:
-                combination.add(sliced_universal_set[index-1])
-                sliced_universal_set = sliced_universal_set[index:]
+                combination.add(sliced_universal_set[index])
+                sliced_universal_set = sliced_universal_set[index+1:]
+                rank -= (index_rank - combs)
+                break
 
     combination = Combination(universal_set, combination)
 
     return combination
 
 
+def rank_combination(universal_set: Set[Any], combination: Set[Any]) -> int:
+
+    """
+    Compute a zero-based unique combinatorial index for a specific k-sized
+    combination choosen from the n-sized `universal_set` attribute. The
+    lexicographic index ranges from 0 to "n choose k" - 1.
+
+    :param universal_set: The universal_set of the combination.
+    :type universal_set: Set[Any]
+    :param combination: The combination.
+    :type combination: Set[Any]
+    :return: Lexicograpic index of the given k-sized combination.
+    :rtype: int
+    """
+
+    rank = 0
+    for i, item in enumerate(sorted(list(combination))):
+
+        # index of the current item in the universal set
+        index = universal_set.index(item)
+
+        for rank_index in range(index):
+
+            # Compute the contribution to the rank
+            rank += comb(
+                len(universal_set[rank_index+1:]),
+                len(combination) - (i + 1)
+            )
+
+        # Remove the items from the universal set for subsequent
+        # calculations
+        universal_set = universal_set[index+1:]
+
+    return rank
+
+
+
 class Combination:
 
-    def __init__(self, universal_set: Set[Any], combination: Set[Any, ...]):
+    def __init__(self, universal_set: Set[Any], combination: Set[Any]):
 
         """
         K-sized combination of a universal set.
@@ -104,10 +146,6 @@ class Combination:
     def combination(self):
         return self._combination
 
-    def __str__(self):
-
-        return str(self._combination)
-
     def rank(self) -> int:
 
         """
@@ -119,26 +157,7 @@ class Combination:
         :rtype: int
         """
 
-        # Calculate the combinatorial index for the given k-subset
-
-        universal_set = copy(self._universal_set)
-        rank = 0
-        for i, item in enumerate(sorted(list(self._combination))):
-
-            # index of the current item in the universal set
-            index = universal_set.index(item)
-
-            # Compute the contribution to the rank
-            rank += index * comb(
-                len(universal_set) - 1,
-                len(self._combination) - (i + 1)
-            )
-
-            # Remove the items from the universal set for subsequent
-            # calculations
-            universal_set = universal_set[index+1:]
-
-        return rank
+        return rank_combination(self._universal_set, self._combination)
 
     def successor(self) -> Optional[Combination]:
 
@@ -156,6 +175,40 @@ class Combination:
         )
 
         return successor
+    
+    def _check_before_comp(self, _other: Combination):
+
+        if self._universal_set != _other._universal_set:
+            raise ValueError("Cant compare combination with different universal")
+        
+        if len(self._combination) != len(_other._combination):
+            raise ValueError("Cant compare combination of different size")
+    
+    def __eq__(self, _other: Combination) -> bool:
+
+        self._check_before_comp(_other)
+
+        return self.rank() == _other.rank()
+    
+    def __lt__(self, _other: Combination) -> bool:
+
+        self._check_before_comp(_other)
+
+        return self.rank() < _other.rank()
+    
+    def __gt__(self, _other: Combination) -> bool:
+
+        self._check_before_comp(_other)
+
+        return self.rank() > _other.rank()
+    
+    def __hash__(self) -> int:
+        
+        return hash(self.rank())
+    
+    def __str__(self):
+
+        return str(self._combination)
 
 
 class CombinationIterator:
