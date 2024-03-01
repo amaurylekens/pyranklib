@@ -15,7 +15,9 @@ from __future__ import annotations
 
 from copy import copy
 from math import comb, perm
-from typing import Set, Any, Optional, Tuple
+from functools import lru_cache
+from functools import total_ordering
+from typing import Set, Any, Optional, Tuple, FrozenSet
 
 
 ###### Combination ######
@@ -82,7 +84,8 @@ def unrank_combination(
     return combination
 
 
-def rank_combination(universal_set: Set[Any], combination: Set[Any]) -> int:
+@lru_cache
+def rank_combination(universal_set: FrozenSet[Any], combination: FrozenSet[Any]) -> int:
 
     """
     Compute a zero-based unique combinatorial index for a specific k-sized
@@ -96,6 +99,8 @@ def rank_combination(universal_set: Set[Any], combination: Set[Any]) -> int:
     :return: Lexicograpic index of the given k-sized combination.
     :rtype: int
     """
+
+    universal_set = sorted(list(universal_set))
 
     rank = 0
     for i, item in enumerate(sorted(list(combination))):
@@ -118,7 +123,23 @@ def rank_combination(universal_set: Set[Any], combination: Set[Any]) -> int:
     return rank
 
 
+def ensure_comparable(comparison_function):
+    def wrapper(self, other):
+        if not isinstance(other, self.__class__):
+            raise NotImplementedError()
+    
+        if self._universal_set != other._universal_set:
+            raise NotImplementedError()
+        
+        if len(self._combination) != len(other._combination):
+            raise NotImplementedError()
+        
+        return comparison_function(self, other)
+    
+    return wrapper
 
+
+@total_ordering
 class Combination:
 
     def __init__(self, universal_set: Set[Any], combination: Set[Any]):
@@ -134,7 +155,7 @@ class Combination:
                         `universal_set`
         """
 
-        self._universal_set = sorted(universal_set)
+        self._universal_set = universal_set
         self._combination = combination
 
         if any(c not in universal_set for c in combination):
@@ -157,7 +178,7 @@ class Combination:
         :rtype: int
         """
 
-        return rank_combination(self._universal_set, self._combination)
+        return rank_combination(frozenset(self._universal_set), frozenset(self._combination))
 
     def successor(self) -> Optional[Combination]:
 
@@ -176,31 +197,15 @@ class Combination:
 
         return successor
     
-    def _check_before_comp(self, _other: Combination):
-
-        if self._universal_set != _other._universal_set:
-            raise ValueError("Cant compare combination with different universal")
-        
-        if len(self._combination) != len(_other._combination):
-            raise ValueError("Cant compare combination of different size")
-    
+    @ensure_comparable
     def __eq__(self, _other: Combination) -> bool:
-
-        self._check_before_comp(_other)
 
         return self.rank() == _other.rank()
     
+    @ensure_comparable
     def __lt__(self, _other: Combination) -> bool:
 
-        self._check_before_comp(_other)
-
         return self.rank() < _other.rank()
-    
-    def __gt__(self, _other: Combination) -> bool:
-
-        self._check_before_comp(_other)
-
-        return self.rank() > _other.rank()
     
     def __hash__(self) -> int:
         
