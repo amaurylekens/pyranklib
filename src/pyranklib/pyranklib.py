@@ -20,6 +20,23 @@ from functools import total_ordering
 from typing import Set, Any, Optional, Tuple, FrozenSet
 
 
+
+def ensure_comparable(comparison_function):
+    def wrapper(self, other):
+        if not isinstance(other, self.__class__):
+            raise NotImplementedError()
+    
+        if self._universal_set != other._universal_set:
+            raise NotImplementedError()
+        
+        if len(self._combination) != len(other._combination):
+            raise NotImplementedError()
+        
+        return comparison_function(self, other)
+    
+    return wrapper
+
+
 ###### Combination ######
 # Selection of items:
 #  * without repetition
@@ -121,22 +138,6 @@ def rank_combination(universal_set: FrozenSet[Any], combination: FrozenSet[Any])
         universal_set = universal_set[index+1:]
 
     return rank
-
-
-def ensure_comparable(comparison_function):
-    def wrapper(self, other):
-        if not isinstance(other, self.__class__):
-            raise NotImplementedError()
-    
-        if self._universal_set != other._universal_set:
-            raise NotImplementedError()
-        
-        if len(self._combination) != len(other._combination):
-            raise NotImplementedError()
-        
-        return comparison_function(self, other)
-    
-    return wrapper
 
 
 @total_ordering
@@ -248,6 +249,216 @@ class CombinationIterator:
         if current:
             successor = self._combination.successor()
             self._combination = successor
+            return current
+
+        else:
+            raise StopIteration
+        
+
+
+###### Permutation ######
+# k-sized tuple of items:
+#  * without repetition
+#  * order does matter
+#########################
+
+
+def unrank_permutation(
+    universal_set: Set[Any], k: int, index: int
+) -> Optional[Permutation]:
+
+    """
+    Returns a k-sized permutation from a set of items based on a given
+    lexicographic combinatorial index.
+
+    :param universal_set: Set of distinct items.
+    :type universal_set: Set
+
+    :param k: Size of the permutation
+    :type k: int
+
+    :param index: Lexicographic permutation index
+    :type index: int
+
+    :return: k-sized combination corresponding to the given index
+    :rtype: Set
+
+    :Example:
+        >>> universal_set = {'A', 'B', 'C', 'D'}
+        >>> unrank_permutation(universal_set, 3, 0)
+        {'A', 'B', 'C'}
+        >>> unrank_permutation(universal_set, 3, 1)
+        {'A', 'C', 'D'}
+    """
+
+    sliced_universal_set = sorted(list(universal_set))
+    permutation = list()
+
+    if index >= perm(len(universal_set), k):
+        return None
+
+    for i in range(k):
+
+        offset = 0
+        for j, item in enumerate(sliced_universal_set):
+
+            if offset + perm(len(sliced_universal_set)-1, k-(i+1)) > index:
+
+                index -= offset
+                permutation.append(sliced_universal_set[j])
+                sliced_universal_set.pop(j)
+                break
+
+            else:
+                offset += perm(len(sliced_universal_set)-1, k-(i+1))
+
+    permutation = Permutation(universal_set, tuple(permutation))
+
+    return permutation
+
+
+@lru_cache
+def rank_combination(universal_set: FrozenSet[Any], permutation: Tuple[Any, ...]) -> int:
+    
+    """
+    Compute a zero-based unique permutation rank for a specific k-sized
+    permutation choosen from the n-sized `universal_set` attribute. The
+    lexicographic rank ranges from 0 to "n perm k" - 1.
+
+    :param universal_set: The universal_set of the permutation.
+    :type universal_set: Set[Any]
+    :param combination: The permutation.
+    :type combination: Tuple[Any]
+    :return: Lexicograpic rank of the given k-sized permutation.
+    :rtype: int
+    """
+
+    rank = 0
+    for i, item in enumerate(permutation):
+        # index of the current item in the universal set
+        index = universal_set.index(item)
+
+        # Calculate the contribution to the rank
+        rank += index * perm(
+            len(universal_set) - 1,
+            len(permutation) - 1 - i
+        )
+
+        # Remove the item from the universal set for subsequent calculations
+        universal_set.remove(item)
+
+    return rank
+
+
+@total_ordering
+class Permutation:
+
+    def __init__(self, universal_set: Set[Any], permutation: Tuple[Any, ...]):
+
+        """
+        K-sized permutation of a universal set.
+
+        :param universal_set: Set of distinct items
+        :param permutation: A permutation from the universal set.
+
+        :raises:
+            ValueError: if at least one element of `permutation` is not in
+                        `universal_set`
+        """
+
+        self._universal_set = universal_set
+        self._permutation = permutation
+
+        if any(p not in universal_set for p in permutation):
+            raise ValueError(
+                "Each item of `permuation` should be in `universal_set`"
+            )
+
+    @property
+    def permutation(self):
+        return self._permutation
+
+    def rank(self) -> int:
+
+        """
+        Compute a zero-based unique permutation rank for a specific k-sized
+        permutation choosen from the n-sized `universal_set` attribute. The
+        lexicographic rank ranges from 0 to "n perm k" - 1.
+
+        :return: Lexicograpic rank of the given k-sized permutation.
+        :rtype: int
+        """
+
+        return rank_combination(tuple(self._universal_set), frozenset(self._permutation))
+
+    def successor(self) -> Optional[Combination]:
+
+        """
+        Returns successor permutation in lexicographic order. If there is no
+        successor, a None is returned.
+
+        :return: Successor permutation in lexicographic order.
+        :rtype: Optional[Combination]
+        """
+
+        rank = self.rank()
+        successor = unrank_combination(
+            set(self._universal_set), len(self.permutation), rank+1
+        )
+
+        return successor
+    
+    @ensure_comparable
+    def __eq__(self, _other: Permutation) -> bool:
+
+        return self.rank() == _other.rank()
+    
+    @ensure_comparable
+    def __lt__(self, _other: Permutation) -> bool:
+
+        return self.rank() < _other.rank()
+    
+    def __hash__(self) -> int:
+        
+        return hash(self.rank())
+    
+    def __str__(self):
+
+        return str(self._permutation)
+
+
+class PermuationIterator:
+
+    def __init__(
+        self, universal_set: Set[Any], k: int, initial_index: int = 0
+    ):
+
+        """
+        Lexicographic order combination iterator.
+
+        :param universal_set: Set of distinct items.
+        :type universal_set: Set[Any]
+
+        :param k: Size of the combination
+        :type k: int
+
+        :param initial_index: initial lexicographic index for the iterator. 0
+                              by default.
+        :type initial_index: int
+        """
+
+        self._permuation = unrank_permutation(universal_set, k, initial_index)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+
+        current = self._permuation
+
+        if current:
+            successor = self._permuation.successor()
+            self._permuation = successor
             return current
 
         else:
@@ -519,181 +730,6 @@ class SizedIntegerPartition:
         )
 
         return successor
-
-
-###### Permutation ######
-# k-sized tuple of items:
-#  * without repetition
-#  * order does matter
-#########################
-
-
-def unrank_permutation(
-    universal_set: Set[Any], k: int, index: int
-) -> Optional[Permutation]:
-
-    """
-    Returns a k-sized permutation from a set of items based on a given
-    lexicographic combinatorial index.
-
-    :param universal_set: Set of distinct items.
-    :type universal_set: Set
-
-    :param k: Size of the permutation
-    :type k: int
-
-    :param index: Lexicographic permutation index
-    :type index: int
-
-    :return: k-sized combination corresponding to the given index
-    :rtype: Set
-
-    :Example:
-        >>> universal_set = {'A', 'B', 'C', 'D'}
-        >>> unrank_permutation(universal_set, 3, 0)
-        {'A', 'B', 'C'}
-        >>> unrank_permutation(universal_set, 3, 1)
-        {'A', 'C', 'D'}
-    """
-
-    sorted_items = sorted(universal_set)
-    permutation = list()
-
-    if index >= perm(len(universal_set), k):
-        return None
-
-    for i in range(k):
-
-        offset = 0
-        for j, item in enumerate(sorted_items):
-
-            if offset + perm(len(sorted_items)-1, k-(i+1)) > index:
-
-                index -= offset
-                permutation.append(sorted_items[j])
-                sorted_items.pop(j)
-                break
-
-            else:
-                offset += perm(len(sorted_items)-1, k-(i+1))
-
-    permutation = Permutation(universal_set, tuple(permutation))
-
-    return permutation
-
-
-class Permutation:
-
-    def __init__(self, universal_set: Set[Any], permutation: Tuple[Any, ...]):
-
-        """
-        K-sized permutation of a universal set.
-
-        :param universal_set: Set of distinct items
-        :param permutation: A permutation from the universal set.
-
-        :raises:
-            ValueError: if at least one element of `permutation` is not in
-                        `universal_set`
-        """
-
-        self._universal_set = sorted(universal_set)
-        self._permutation = permutation
-
-        if any(p not in universal_set for p in permutation):
-            raise ValueError(
-                "Each item of `permuation` should be in `universal_set`"
-            )
-
-    @property
-    def permutation(self):
-        return self._permutation
-
-    def __str__(self):
-
-        return str(self._permutation)
-
-    def rank(self) -> int:
-
-        """
-        Compute a zero-based unique permutation rank for a specific k-sized
-        permutation choosen from the n-sized `universal_set` attribute. The
-        lexicographic rank ranges from 0 to "n perm k" - 1.
-
-        :return: Lexicograpic rank of the given k-sized combination.
-        :rtype: int
-        """
-
-        rank = 0
-        for i, item in enumerate(self._permutation):
-            # index of the current item in the universal set
-            index = self._universal_set.index(item)
-
-            # Calculate the contribution to the rank
-            rank += index * perm(
-                len(self._universal_set) - 1,
-                len(self._permutation) - 1 - i
-            )
-
-            # Remove the item from the universal set for subsequent calculations
-            self._universal_set.remove(item)
-
-        return rank
-
-    def successor(self) -> Optional[Combination]:
-
-        """
-        Returns successor permutation in lexicographic order. If there is no
-        successor, a None is returned.
-
-        :return: Successor permutation in lexicographic order.
-        :rtype: Optional[Combination]
-        """
-
-        rank = self.rank()
-        successor = unrank_combination(
-            set(self._universal_set), len(self.permutation), rank+1
-        )
-
-        return successor
-
-
-class PermuationIterator:
-
-    def __init__(
-        self, universal_set: Set[Any], k: int, initial_index: int = 0
-    ):
-
-        """
-        Lexicographic order combination iterator.
-
-        :param universal_set: Set of distinct items.
-        :type universal_set: Set[Any]
-
-        :param k: Size of the combination
-        :type k: int
-
-        :param initial_index: initial lexicographic index for the iterator. 0
-                              by default.
-        :type initial_index: int
-        """
-
-        self._permuation = unrank_permutation(universal_set, k, initial_index)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-
-        current = self._permuation
-
-        if current:
-            successor = self._permuation.successor()
-            self._permuation = successor
-            return current
-
-        else:
-            raise StopIteration
 
 
 ###### MultiPermutation ######
