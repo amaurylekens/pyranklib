@@ -61,6 +61,9 @@ class Combinatoric(ABC):
         self._universal_set = universal_set
         self._combinatoric = combinatoric
 
+    @property
+    def permutation(self):
+        return self._combinatoric
 
     def successor(self) -> Optional[Combination]:
 
@@ -356,6 +359,7 @@ def rank_permutation(universal_set: FrozenSet[Any], permutation: Tuple[Any, ...]
     """
 
     rank = 0
+    universal_set = sorted(list(universal_set))
     for i, item in enumerate(permutation):
         # index of the current item in the universal set
         index = universal_set.index(item)
@@ -385,10 +389,6 @@ class Permutation(Combinatoric):
         """
 
         super().__init__(universal_set, combinatoric)
-
-    @property
-    def permutation(self):
-        return self._combinatoric
 
     def rank(self) -> int:
 
