@@ -17,7 +17,8 @@ from copy import copy
 from math import comb, perm
 from functools import lru_cache
 from functools import total_ordering
-from typing import Set, Any, Optional, Tuple, FrozenSet
+from abc import ABC, abstractmethod
+from typing import Set, Any, Optional, Tuple, FrozenSet, Hashable
 
 
 
@@ -29,12 +30,78 @@ def ensure_comparable(comparison_function):
         if self._universal_set != other._universal_set:
             raise NotImplementedError()
         
-        if len(self._combination) != len(other._combination):
+        if len(self._combinatoric) != len(other._combinatoric):
             raise NotImplementedError()
         
         return comparison_function(self, other)
     
     return wrapper
+
+
+class Combinatoric(ABC):
+
+    def __init__(self, universal_set: Set[Any], combinatoric: Hashable[Any]) -> None:
+
+        """
+        K-sized combination of a universal set.
+
+        :param universal_set: Set of distinct items
+        :param combinatoric: A combinatoric from the universal set.
+
+        :raises:
+            ValueError: if at least one element of `combination` is not in
+                        `universal_set`
+        """
+
+        if any(c not in universal_set for c in combinatoric):
+            raise ValueError(
+                "Each item of a `combinatoric` should be in `universal_set`"
+            )
+        
+        self._universal_set = universal_set
+        self._combinatoric = combinatoric
+
+
+    def successor(self) -> Optional[Combination]:
+
+        """
+        Returns successor combination in lexicographic order. If there is no
+        successor, a None is returned.
+
+        :return: Successor combination in lexicographic order.
+        :rtype: Optional[Combination]
+        """
+
+        rank = self.rank()
+        successor = unrank_combination(
+            set(self._universal_set), len(self._combinatoric), rank+1
+        )
+
+        return successor
+
+    @abstractmethod
+    def rank(self):
+
+        pass
+
+    @ensure_comparable
+    def __eq__(self, _other: Combination) -> bool:
+
+        return self.rank() == _other.rank()
+    
+    @ensure_comparable
+    def __lt__(self, _other: Combination) -> bool:
+
+        return self.rank() < _other.rank()
+    
+    def __hash__(self) -> int:
+        
+        return hash(self.rank())
+    
+    def __str__(self):
+
+        return str(self._combination)
+
 
 
 ###### Combination ######
@@ -141,7 +208,7 @@ def rank_combination(universal_set: FrozenSet[Any], combination: FrozenSet[Any])
 
 
 @total_ordering
-class Combination:
+class Combination(Combinatoric):
 
     def __init__(self, universal_set: Set[Any], combination: Set[Any]):
 
@@ -150,23 +217,13 @@ class Combination:
 
         :param universal_set: Set of distinct items
         :param combination: A combination from the universal set.
-
-        :raises:
-            ValueError: if at least one element of `combination` is not in
-                        `universal_set`
         """
 
-        self._universal_set = universal_set
-        self._combination = combination
-
-        if any(c not in universal_set for c in combination):
-            raise ValueError(
-                "Each item of `combination` should be in `universal_set`"
-            )
+        super().__init__(universal_set, combination)
 
     @property
     def combination(self):
-        return self._combination
+        return self._combinatoric
 
     def rank(self) -> int:
 
@@ -179,42 +236,7 @@ class Combination:
         :rtype: int
         """
 
-        return rank_combination(frozenset(self._universal_set), frozenset(self._combination))
-
-    def successor(self) -> Optional[Combination]:
-
-        """
-        Returns successor combination in lexicographic order. If there is no
-        successor, a None is returned.
-
-        :return: Successor combination in lexicographic order.
-        :rtype: Optional[Combination]
-        """
-
-        rank = self.rank()
-        successor = unrank_combination(
-            set(self._universal_set), len(self.combination), rank+1
-        )
-
-        return successor
-    
-    @ensure_comparable
-    def __eq__(self, _other: Combination) -> bool:
-
-        return self.rank() == _other.rank()
-    
-    @ensure_comparable
-    def __lt__(self, _other: Combination) -> bool:
-
-        return self.rank() < _other.rank()
-    
-    def __hash__(self) -> int:
-        
-        return hash(self.rank())
-    
-    def __str__(self):
-
-        return str(self._combination)
+        return rank_combination(frozenset(self._universal_set), frozenset(self._combinatoric))
 
 
 class CombinationIterator:
@@ -318,7 +340,7 @@ def unrank_permutation(
 
 
 @lru_cache
-def rank_combination(universal_set: FrozenSet[Any], permutation: Tuple[Any, ...]) -> int:
+def rank_permutation(universal_set: FrozenSet[Any], permutation: Tuple[Any, ...]) -> int:
     
     """
     Compute a zero-based unique permutation rank for a specific k-sized
@@ -351,32 +373,22 @@ def rank_combination(universal_set: FrozenSet[Any], permutation: Tuple[Any, ...]
 
 
 @total_ordering
-class Permutation:
+class Permutation(Combinatoric):
 
-    def __init__(self, universal_set: Set[Any], permutation: Tuple[Any, ...]):
+    def __init__(self, universal_set: Set[Any], combinatoric: Tuple[Any, ...]):
 
         """
         K-sized permutation of a universal set.
 
         :param universal_set: Set of distinct items
-        :param permutation: A permutation from the universal set.
-
-        :raises:
-            ValueError: if at least one element of `permutation` is not in
-                        `universal_set`
+        :param combinatoric: A permutation from the universal set.
         """
 
-        self._universal_set = universal_set
-        self._permutation = permutation
-
-        if any(p not in universal_set for p in permutation):
-            raise ValueError(
-                "Each item of `permuation` should be in `universal_set`"
-            )
+        super().__init__(universal_set, combinatoric)
 
     @property
     def permutation(self):
-        return self._permutation
+        return self._combinatoric
 
     def rank(self) -> int:
 
@@ -389,42 +401,7 @@ class Permutation:
         :rtype: int
         """
 
-        return rank_combination(tuple(self._universal_set), frozenset(self._permutation))
-
-    def successor(self) -> Optional[Combination]:
-
-        """
-        Returns successor permutation in lexicographic order. If there is no
-        successor, a None is returned.
-
-        :return: Successor permutation in lexicographic order.
-        :rtype: Optional[Combination]
-        """
-
-        rank = self.rank()
-        successor = unrank_combination(
-            set(self._universal_set), len(self.permutation), rank+1
-        )
-
-        return successor
-    
-    @ensure_comparable
-    def __eq__(self, _other: Permutation) -> bool:
-
-        return self.rank() == _other.rank()
-    
-    @ensure_comparable
-    def __lt__(self, _other: Permutation) -> bool:
-
-        return self.rank() < _other.rank()
-    
-    def __hash__(self) -> int:
-        
-        return hash(self.rank())
-    
-    def __str__(self):
-
-        return str(self._permutation)
+        return rank_combination(tuple(self._universal_set), frozenset(self._combinatoric))
 
 
 class PermuationIterator:
