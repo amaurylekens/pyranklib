@@ -62,25 +62,12 @@ class Combinatoric(ABC):
         self._combinatoric = combinatoric
 
     @property
-    def permutation(self):
+    def combinatoric(self):
         return self._combinatoric
 
     def successor(self) -> Optional[Combination]:
 
-        """
-        Returns successor combination in lexicographic order. If there is no
-        successor, a None is returned.
-
-        :return: Successor combination in lexicographic order.
-        :rtype: Optional[Combination]
-        """
-
-        rank = self.rank()
-        successor = unrank_combination(
-            set(self._universal_set), len(self._combinatoric), rank+1
-        )
-
-        return successor
+        pass
 
     @abstractmethod
     def rank(self):
@@ -224,10 +211,6 @@ class Combination(Combinatoric):
 
         super().__init__(universal_set, combination)
 
-    @property
-    def combination(self):
-        return self._combinatoric
-
     def rank(self) -> int:
 
         """
@@ -240,6 +223,23 @@ class Combination(Combinatoric):
         """
 
         return rank_combination(frozenset(self._universal_set), frozenset(self._combinatoric))
+    
+    def successor(self) -> Optional[Combination]:
+
+        """
+        Returns successor combination in lexicographic order. If there is no
+        successor, a None is returned.
+
+        :return: Successor combination in lexicographic order.
+        :rtype: Optional[Combination]
+        """
+
+        rank = self.rank()
+        successor = unrank_combination(
+            set(self._universal_set), len(self._combinatoric), rank+1
+        )
+
+        return successor
 
 
 class CombinationIterator:
@@ -401,10 +401,27 @@ class Permutation(Combinatoric):
         :rtype: int
         """
 
-        return rank_combination(tuple(self._universal_set), frozenset(self._combinatoric))
+        return rank_permutation(frozenset(self._universal_set), tuple(self._combinatoric))
+    
+    def successor(self) -> Optional[Permutation]:
+
+        """
+        Returns successor permutation in lexicographic order. If there is no
+        successor, a None is returned.
+
+        :return: Successor permutation in lexicographic order.
+        :rtype: Optional[Permutation]
+        """
+
+        rank = self.rank()
+        successor = unrank_permutation(
+            self._universal_set, len(self._combinatoric), rank+1
+        )
+
+        return successor
 
 
-class PermuationIterator:
+class PermutationIterator:
 
     def __init__(
         self, universal_set: Set[Any], k: int, initial_index: int = 0
